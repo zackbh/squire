@@ -18,6 +18,7 @@ Suggests:
 RoxygenNote: 7.0.2
 Imports: 
     odin,
+    odin.js,
     dde,
     dplyr,
     tidyr,
