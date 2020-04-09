@@ -418,6 +418,64 @@ typedef struct explict_SEIR_internal {
   double *tt_beta;
   double *tt_matrix;
 } explict_SEIR_internal;
+typedef struct less_basic_model_for_js_internal {
+  double beta_1;
+  double beta_2;
+  double *D0;
+  int dim_D;
+  int dim_D0;
+  int dim_E;
+  int dim_E0;
+  int dim_I_hosp;
+  int dim_I_hosp0;
+  int dim_I_ICU;
+  int dim_I_ICU0;
+  int dim_I_mild;
+  int dim_I_mild0;
+  int dim_lambda;
+  int dim_m;
+  int dim_m_1;
+  int dim_m_2;
+  int dim_p_hosp;
+  int dim_p_ICU;
+  int dim_p_mild;
+  int dim_R;
+  int dim_R0;
+  int dim_S;
+  int dim_s_ij;
+  int dim_s_ij_1;
+  int dim_s_ij_2;
+  int dim_S0;
+  int dim_temp;
+  double *E0;
+  double gamma;
+  double *I_hosp0;
+  double *I_ICU0;
+  double *I_mild0;
+  double *initial_D;
+  double *initial_E;
+  double *initial_I_hosp;
+  double *initial_I_ICU;
+  double *initial_I_mild;
+  double *initial_R;
+  double *initial_S;
+  double *lambda;
+  double *m;
+  double mu;
+  int offset_variable_D;
+  int offset_variable_I_hosp;
+  int offset_variable_I_ICU;
+  int offset_variable_I_mild;
+  int offset_variable_R;
+  double *p_hosp;
+  double *p_ICU;
+  double *p_mild;
+  double *R0;
+  double *s_ij;
+  double *S0;
+  double sigma;
+  double *temp;
+} less_basic_model_for_js_internal;
 typedef struct SEIR_internal {
   double *beta_set;
   double *delta_E1;
@@ -505,6 +563,18 @@ SEXP explict_SEIR_initial_conditions(SEXP internal_p, SEXP step_ptr);
 void explict_SEIR_rhs(explict_SEIR_internal* internal, size_t step, double * state, double * state_next, double * output);
 void explict_SEIR_rhs_dde(size_t n_eq, size_t step, double * state, double * state_next, size_t n_out, double * output, void * internal);
 SEXP explict_SEIR_rhs_r(SEXP internal_p, SEXP step, SEXP state);
+less_basic_model_for_js_internal* less_basic_model_for_js_get_internal(SEXP internal_p, int closed_error);
+static void less_basic_model_for_js_finalise(SEXP internal_p);
+SEXP less_basic_model_for_js_create(SEXP user);
+void less_basic_model_for_js_initmod_desolve(void(* odeparms) (int *, double *));
+SEXP less_basic_model_for_js_contents(SEXP internal_p);
+SEXP less_basic_model_for_js_set_user(SEXP internal_p, SEXP user);
+SEXP less_basic_model_for_js_metadata(SEXP internal_p);
+SEXP less_basic_model_for_js_initial_conditions(SEXP internal_p, SEXP t_ptr);
+void less_basic_model_for_js_rhs(less_basic_model_for_js_internal* internal, double t, double * state, double * dstatedt, double * output);
+void less_basic_model_for_js_rhs_dde(size_t neq, double t, double * state, double * dstatedt, void * internal);
+void less_basic_model_for_js_rhs_desolve(int * neq, double * t, double * state, double * dstatedt, double * output, int * np);
+SEXP less_basic_model_for_js_rhs_r(SEXP internal_p, SEXP t, SEXP state);
 SEIR_internal* SEIR_get_internal(SEXP internal_p, int closed_error);
 static void SEIR_finalise(SEXP internal_p);
 SEXP SEIR_create(SEXP user);
@@ -3001,6 +3071,454 @@ SEXP explict_SEIR_rhs_r(SEXP internal_p, SEXP step, SEXP state) {
   PutRNGstate();
   UNPROTECT(1);
   return state_next;
+}
+less_basic_model_for_js_internal* less_basic_model_for_js_get_internal(SEXP internal_p, int closed_error) {
+  less_basic_model_for_js_internal *internal = NULL;
+  if (TYPEOF(internal_p) != EXTPTRSXP) {
+    Rf_error("Expected an external pointer");
+  }
+  internal = (less_basic_model_for_js_internal*) R_ExternalPtrAddr(internal_p);
+  if (!internal && closed_error) {
+    Rf_error("Pointer has been invalidated");
+  }
+  return internal;
+}
+void less_basic_model_for_js_finalise(SEXP internal_p) {
+  less_basic_model_for_js_internal *internal = less_basic_model_for_js_get_internal(internal_p, 0);
+  if (internal_p) {
+    Free(internal->D0);
+    Free(internal->E0);
+    Free(internal->I_hosp0);
+    Free(internal->I_ICU0);
+    Free(internal->I_mild0);
+    Free(internal->initial_D);
+    Free(internal->initial_E);
+    Free(internal->initial_I_hosp);
+    Free(internal->initial_I_ICU);
+    Free(internal->initial_I_mild);
+    Free(internal->initial_R);
+    Free(internal->initial_S);
+    Free(internal->lambda);
+    Free(internal->m);
+    Free(internal->p_hosp);
+    Free(internal->p_ICU);
+    Free(internal->p_mild);
+    Free(internal->R0);
+    Free(internal->s_ij);
+    Free(internal->S0);
+    Free(internal->temp);
+    Free(internal);
+    R_ClearExternalPtr(internal_p);
+  }
+}
+SEXP less_basic_model_for_js_create(SEXP user) {
+  less_basic_model_for_js_internal *internal = (less_basic_model_for_js_internal*) Calloc(1, less_basic_model_for_js_internal);
+  internal->D0 = NULL;
+  internal->E0 = NULL;
+  internal->I_hosp0 = NULL;
+  internal->I_ICU0 = NULL;
+  internal->I_mild0 = NULL;
+  internal->initial_D = NULL;
+  internal->initial_E = NULL;
+  internal->initial_I_hosp = NULL;
+  internal->initial_I_ICU = NULL;
+  internal->initial_I_mild = NULL;
+  internal->initial_R = NULL;
+  internal->initial_S = NULL;
+  internal->lambda = NULL;
+  internal->m = NULL;
+  internal->p_hosp = NULL;
+  internal->p_ICU = NULL;
+  internal->p_mild = NULL;
+  internal->R0 = NULL;
+  internal->s_ij = NULL;
+  internal->S0 = NULL;
+  internal->temp = NULL;
+  internal->dim_D = 2;
+  internal->dim_D0 = 2;
+  internal->dim_E = 2;
+  internal->dim_E0 = 2;
+  internal->dim_I_hosp = 2;
+  internal->dim_I_hosp0 = 2;
+  internal->dim_I_ICU = 2;
+  internal->dim_I_ICU0 = 2;
+  internal->dim_I_mild = 2;
+  internal->dim_I_mild0 = 2;
+  internal->dim_lambda = 2;
+  internal->dim_m_1 = 2;
+  internal->dim_m_2 = 2;
+  internal->dim_p_hosp = 2;
+  internal->dim_p_ICU = 2;
+  internal->dim_p_mild = 2;
+  internal->dim_R = 2;
+  internal->dim_R0 = 2;
+  internal->dim_S = 2;
+  internal->dim_s_ij_1 = 2;
+  internal->dim_s_ij_2 = 2;
+  internal->dim_S0 = 2;
+  internal->dim_temp = 2;
+  Free(internal->initial_D);
+  internal->initial_D = (double*) Calloc(internal->dim_D, double);
+  Free(internal->initial_E);
+  internal->initial_E = (double*) Calloc(internal->dim_E, double);
+  Free(internal->initial_I_hosp);
+  internal->initial_I_hosp = (double*) Calloc(internal->dim_I_hosp, double);
+  Free(internal->initial_I_ICU);
+  internal->initial_I_ICU = (double*) Calloc(internal->dim_I_ICU, double);
+  Free(internal->initial_I_mild);
+  internal->initial_I_mild = (double*) Calloc(internal->dim_I_mild, double);
+  Free(internal->initial_R);
+  internal->initial_R = (double*) Calloc(internal->dim_R, double);
+  Free(internal->initial_S);
+  internal->initial_S = (double*) Calloc(internal->dim_S, double);
+  Free(internal->lambda);
+  internal->lambda = (double*) Calloc(internal->dim_lambda, double);
+  Free(internal->temp);
+  internal->temp = (double*) Calloc(internal->dim_temp, double);
+  internal->dim_m = internal->dim_m_1 * internal->dim_m_2;
+  internal->dim_s_ij = internal->dim_s_ij_1 * internal->dim_s_ij_2;
+  internal->offset_variable_D = internal->dim_S + internal->dim_E + internal->dim_I_mild + internal->dim_I_hosp + internal->dim_I_ICU + internal->dim_R;
+  internal->offset_variable_I_hosp = internal->dim_S + internal->dim_E + internal->dim_I_mild;
+  internal->offset_variable_I_ICU = internal->dim_S + internal->dim_E + internal->dim_I_mild + internal->dim_I_hosp;
+  internal->offset_variable_I_mild = internal->dim_S + internal->dim_E;
+  internal->offset_variable_R = internal->dim_S + internal->dim_E + internal->dim_I_mild + internal->dim_I_hosp + internal->dim_I_ICU;
+  Free(internal->s_ij);
+  internal->s_ij = (double*) Calloc(internal->dim_s_ij, double);
+  internal->beta_1 = NA_REAL;
+  internal->beta_2 = NA_REAL;
+  internal->D0 = NULL;
+  internal->E0 = NULL;
+  internal->gamma = NA_REAL;
+  internal->I_hosp0 = NULL;
+  internal->I_ICU0 = NULL;
+  internal->I_mild0 = NULL;
+  internal->m = NULL;
+  internal->mu = NA_REAL;
+  internal->p_hosp = NULL;
+  internal->p_ICU = NULL;
+  internal->p_mild = NULL;
+  internal->R0 = NULL;
+  internal->S0 = NULL;
+  internal->sigma = NA_REAL;
+  SEXP ptr = PROTECT(R_MakeExternalPtr(internal, R_NilValue, R_NilValue));
+  R_RegisterCFinalizer(ptr, less_basic_model_for_js_finalise);
+  UNPROTECT(1);
+  return ptr;
+}
+static less_basic_model_for_js_internal *less_basic_model_for_js_internal_ds;
+void less_basic_model_for_js_initmod_desolve(void(* odeparms) (int *, double *)) {
+  static DL_FUNC get_desolve_gparms = NULL;
+  if (get_desolve_gparms == NULL) {
+    get_desolve_gparms =
+      R_GetCCallable("deSolve", "get_deSolve_gparms");
+  }
+  less_basic_model_for_js_internal_ds = less_basic_model_for_js_get_internal(get_desolve_gparms(), 1);
+}
+SEXP less_basic_model_for_js_contents(SEXP internal_p) {
+  less_basic_model_for_js_internal *internal = less_basic_model_for_js_get_internal(internal_p, 1);
+  SEXP contents = PROTECT(allocVector(VECSXP, 56));
+  SET_VECTOR_ELT(contents, 0, ScalarReal(internal->beta_1));
+  SET_VECTOR_ELT(contents, 1, ScalarReal(internal->beta_2));
+  SEXP D0 = PROTECT(allocVector(REALSXP, internal->dim_D0));
+  memcpy(REAL(D0), internal->D0, internal->dim_D0 * sizeof(double));
+  SET_VECTOR_ELT(contents, 2, D0);
+  SET_VECTOR_ELT(contents, 3, ScalarInteger(internal->dim_D));
+  SET_VECTOR_ELT(contents, 4, ScalarInteger(internal->dim_D0));
+  SET_VECTOR_ELT(contents, 5, ScalarInteger(internal->dim_E));
+  SET_VECTOR_ELT(contents, 6, ScalarInteger(internal->dim_E0));
+  SET_VECTOR_ELT(contents, 7, ScalarInteger(internal->dim_I_hosp));
+  SET_VECTOR_ELT(contents, 8, ScalarInteger(internal->dim_I_hosp0));
+  SET_VECTOR_ELT(contents, 9, ScalarInteger(internal->dim_I_ICU));
+  SET_VECTOR_ELT(contents, 10, ScalarInteger(internal->dim_I_ICU0));
+  SET_VECTOR_ELT(contents, 11, ScalarInteger(internal->dim_I_mild));
+  SET_VECTOR_ELT(contents, 12, ScalarInteger(internal->dim_I_mild0));
+  SET_VECTOR_ELT(contents, 13, ScalarInteger(internal->dim_lambda));
+  SET_VECTOR_ELT(contents, 14, ScalarInteger(internal->dim_m));
+  SET_VECTOR_ELT(contents, 15, ScalarInteger(internal->dim_m_1));
+  SET_VECTOR_ELT(contents, 16, ScalarInteger(internal->dim_m_2));
+  SET_VECTOR_ELT(contents, 17, ScalarInteger(internal->dim_p_hosp));
+  SET_VECTOR_ELT(contents, 18, ScalarInteger(internal->dim_p_ICU));
+  SET_VECTOR_ELT(contents, 19, ScalarInteger(internal->dim_p_mild));
+  SET_VECTOR_ELT(contents, 20, ScalarInteger(internal->dim_R));
+  SET_VECTOR_ELT(contents, 21, ScalarInteger(internal->dim_R0));
+  SET_VECTOR_ELT(contents, 22, ScalarInteger(internal->dim_S));
+  SET_VECTOR_ELT(contents, 23, ScalarInteger(internal->dim_s_ij));
+  SET_VECTOR_ELT(contents, 24, ScalarInteger(internal->dim_s_ij_1));
+  SET_VECTOR_ELT(contents, 25, ScalarInteger(internal->dim_s_ij_2));
+  SET_VECTOR_ELT(contents, 26, ScalarInteger(internal->dim_S0));
+  SET_VECTOR_ELT(contents, 27, ScalarInteger(internal->dim_temp));
+  SEXP E0 = PROTECT(allocVector(REALSXP, internal->dim_E0));
+  memcpy(REAL(E0), internal->E0, internal->dim_E0 * sizeof(double));
+  SET_VECTOR_ELT(contents, 28, E0);
+  SET_VECTOR_ELT(contents, 29, ScalarReal(internal->gamma));
+  SEXP I_hosp0 = PROTECT(allocVector(REALSXP, internal->dim_I_hosp0));
+  memcpy(REAL(I_hosp0), internal->I_hosp0, internal->dim_I_hosp0 * sizeof(double));
+  SET_VECTOR_ELT(contents, 30, I_hosp0);
+  SEXP I_ICU0 = PROTECT(allocVector(REALSXP, internal->dim_I_ICU0));
+  memcpy(REAL(I_ICU0), internal->I_ICU0, internal->dim_I_ICU0 * sizeof(double));
+  SET_VECTOR_ELT(contents, 31, I_ICU0);
+  SEXP I_mild0 = PROTECT(allocVector(REALSXP, internal->dim_I_mild0));
+  memcpy(REAL(I_mild0), internal->I_mild0, internal->dim_I_mild0 * sizeof(double));
+  SET_VECTOR_ELT(contents, 32, I_mild0);
+  SEXP initial_D = PROTECT(allocVector(REALSXP, internal->dim_D));
+  memcpy(REAL(initial_D), internal->initial_D, internal->dim_D * sizeof(double));
+  SET_VECTOR_ELT(contents, 33, initial_D);
+  SEXP initial_E = PROTECT(allocVector(REALSXP, internal->dim_E));
+  memcpy(REAL(initial_E), internal->initial_E, internal->dim_E * sizeof(double));
+  SET_VECTOR_ELT(contents, 34, initial_E);
+  SEXP initial_I_hosp = PROTECT(allocVector(REALSXP, internal->dim_I_hosp));
+  memcpy(REAL(initial_I_hosp), internal->initial_I_hosp, internal->dim_I_hosp * sizeof(double));
+  SET_VECTOR_ELT(contents, 35, initial_I_hosp);
+  SEXP initial_I_ICU = PROTECT(allocVector(REALSXP, internal->dim_I_ICU));
+  memcpy(REAL(initial_I_ICU), internal->initial_I_ICU, internal->dim_I_ICU * sizeof(double));
+  SET_VECTOR_ELT(contents, 36, initial_I_ICU);
+  SEXP initial_I_mild = PROTECT(allocVector(REALSXP, internal->dim_I_mild));
+  memcpy(REAL(initial_I_mild), internal->initial_I_mild, internal->dim_I_mild * sizeof(double));
+  SET_VECTOR_ELT(contents, 37, initial_I_mild);
+  SEXP initial_R = PROTECT(allocVector(REALSXP, internal->dim_R));
+  memcpy(REAL(initial_R), internal->initial_R, internal->dim_R * sizeof(double));
+  SET_VECTOR_ELT(contents, 38, initial_R);
+  SEXP initial_S = PROTECT(allocVector(REALSXP, internal->dim_S));
+  memcpy(REAL(initial_S), internal->initial_S, internal->dim_S * sizeof(double));
+  SET_VECTOR_ELT(contents, 39, initial_S);
+  SEXP lambda = PROTECT(allocVector(REALSXP, internal->dim_lambda));
+  memcpy(REAL(lambda), internal->lambda, internal->dim_lambda * sizeof(double));
+  SET_VECTOR_ELT(contents, 40, lambda);
+  SEXP m = PROTECT(allocVector(REALSXP, internal->dim_m));
+  memcpy(REAL(m), internal->m, internal->dim_m * sizeof(double));
+  odin_set_dim(m, 2, internal->dim_m_1, internal->dim_m_2);
+  SET_VECTOR_ELT(contents, 41, m);
+  SET_VECTOR_ELT(contents, 42, ScalarReal(internal->mu));
+  SET_VECTOR_ELT(contents, 43, ScalarInteger(internal->offset_variable_D));
+  SET_VECTOR_ELT(contents, 44, ScalarInteger(internal->offset_variable_I_hosp));
+  SET_VECTOR_ELT(contents, 45, ScalarInteger(internal->offset_variable_I_ICU));
+  SET_VECTOR_ELT(contents, 46, ScalarInteger(internal->offset_variable_I_mild));
+  SET_VECTOR_ELT(contents, 47, ScalarInteger(internal->offset_variable_R));
+  SEXP p_hosp = PROTECT(allocVector(REALSXP, internal->dim_p_hosp));
+  memcpy(REAL(p_hosp), internal->p_hosp, internal->dim_p_hosp * sizeof(double));
+  SET_VECTOR_ELT(contents, 48, p_hosp);
+  SEXP p_ICU = PROTECT(allocVector(REALSXP, internal->dim_p_ICU));
+  memcpy(REAL(p_ICU), internal->p_ICU, internal->dim_p_ICU * sizeof(double));
+  SET_VECTOR_ELT(contents, 49, p_ICU);
+  SEXP p_mild = PROTECT(allocVector(REALSXP, internal->dim_p_mild));
+  memcpy(REAL(p_mild), internal->p_mild, internal->dim_p_mild * sizeof(double));
+  SET_VECTOR_ELT(contents, 50, p_mild);
+  SEXP R0 = PROTECT(allocVector(REALSXP, internal->dim_R0));
+  memcpy(REAL(R0), internal->R0, internal->dim_R0 * sizeof(double));
+  SET_VECTOR_ELT(contents, 51, R0);
+  SEXP s_ij = PROTECT(allocVector(REALSXP, internal->dim_s_ij));
+  memcpy(REAL(s_ij), internal->s_ij, internal->dim_s_ij * sizeof(double));
+  odin_set_dim(s_ij, 2, internal->dim_s_ij_1, internal->dim_s_ij_2);
+  SET_VECTOR_ELT(contents, 52, s_ij);
+  SEXP S0 = PROTECT(allocVector(REALSXP, internal->dim_S0));
+  memcpy(REAL(S0), internal->S0, internal->dim_S0 * sizeof(double));
+  SET_VECTOR_ELT(contents, 53, S0);
+  SET_VECTOR_ELT(contents, 54, ScalarReal(internal->sigma));
+  SEXP temp = PROTECT(allocVector(REALSXP, internal->dim_temp));
+  memcpy(REAL(temp), internal->temp, internal->dim_temp * sizeof(double));
+  SET_VECTOR_ELT(contents, 55, temp);
+  SEXP nms = PROTECT(allocVector(STRSXP, 56));
+  SET_STRING_ELT(nms, 0, mkChar("beta_1"));
+  SET_STRING_ELT(nms, 1, mkChar("beta_2"));
+  SET_STRING_ELT(nms, 2, mkChar("D0"));
+  SET_STRING_ELT(nms, 3, mkChar("dim_D"));
+  SET_STRING_ELT(nms, 4, mkChar("dim_D0"));
+  SET_STRING_ELT(nms, 5, mkChar("dim_E"));
+  SET_STRING_ELT(nms, 6, mkChar("dim_E0"));
+  SET_STRING_ELT(nms, 7, mkChar("dim_I_hosp"));
+  SET_STRING_ELT(nms, 8, mkChar("dim_I_hosp0"));
+  SET_STRING_ELT(nms, 9, mkChar("dim_I_ICU"));
+  SET_STRING_ELT(nms, 10, mkChar("dim_I_ICU0"));
+  SET_STRING_ELT(nms, 11, mkChar("dim_I_mild"));
+  SET_STRING_ELT(nms, 12, mkChar("dim_I_mild0"));
+  SET_STRING_ELT(nms, 13, mkChar("dim_lambda"));
+  SET_STRING_ELT(nms, 14, mkChar("dim_m"));
+  SET_STRING_ELT(nms, 15, mkChar("dim_m_1"));
+  SET_STRING_ELT(nms, 16, mkChar("dim_m_2"));
+  SET_STRING_ELT(nms, 17, mkChar("dim_p_hosp"));
+  SET_STRING_ELT(nms, 18, mkChar("dim_p_ICU"));
+  SET_STRING_ELT(nms, 19, mkChar("dim_p_mild"));
+  SET_STRING_ELT(nms, 20, mkChar("dim_R"));
+  SET_STRING_ELT(nms, 21, mkChar("dim_R0"));
+  SET_STRING_ELT(nms, 22, mkChar("dim_S"));
+  SET_STRING_ELT(nms, 23, mkChar("dim_s_ij"));
+  SET_STRING_ELT(nms, 24, mkChar("dim_s_ij_1"));
+  SET_STRING_ELT(nms, 25, mkChar("dim_s_ij_2"));
+  SET_STRING_ELT(nms, 26, mkChar("dim_S0"));
+  SET_STRING_ELT(nms, 27, mkChar("dim_temp"));
+  SET_STRING_ELT(nms, 28, mkChar("E0"));
+  SET_STRING_ELT(nms, 29, mkChar("gamma"));
+  SET_STRING_ELT(nms, 30, mkChar("I_hosp0"));
+  SET_STRING_ELT(nms, 31, mkChar("I_ICU0"));
+  SET_STRING_ELT(nms, 32, mkChar("I_mild0"));
+  SET_STRING_ELT(nms, 33, mkChar("initial_D"));
+  SET_STRING_ELT(nms, 34, mkChar("initial_E"));
+  SET_STRING_ELT(nms, 35, mkChar("initial_I_hosp"));
+  SET_STRING_ELT(nms, 36, mkChar("initial_I_ICU"));
+  SET_STRING_ELT(nms, 37, mkChar("initial_I_mild"));
+  SET_STRING_ELT(nms, 38, mkChar("initial_R"));
+  SET_STRING_ELT(nms, 39, mkChar("initial_S"));
+  SET_STRING_ELT(nms, 40, mkChar("lambda"));
+  SET_STRING_ELT(nms, 41, mkChar("m"));
+  SET_STRING_ELT(nms, 42, mkChar("mu"));
+  SET_STRING_ELT(nms, 43, mkChar("offset_variable_D"));
+  SET_STRING_ELT(nms, 44, mkChar("offset_variable_I_hosp"));
+  SET_STRING_ELT(nms, 45, mkChar("offset_variable_I_ICU"));
+  SET_STRING_ELT(nms, 46, mkChar("offset_variable_I_mild"));
+  SET_STRING_ELT(nms, 47, mkChar("offset_variable_R"));
+  SET_STRING_ELT(nms, 48, mkChar("p_hosp"));
+  SET_STRING_ELT(nms, 49, mkChar("p_ICU"));
+  SET_STRING_ELT(nms, 50, mkChar("p_mild"));
+  SET_STRING_ELT(nms, 51, mkChar("R0"));
+  SET_STRING_ELT(nms, 52, mkChar("s_ij"));
+  SET_STRING_ELT(nms, 53, mkChar("S0"));
+  SET_STRING_ELT(nms, 54, mkChar("sigma"));
+  SET_STRING_ELT(nms, 55, mkChar("temp"));
+  setAttrib(contents, R_NamesSymbol, nms);
+  UNPROTECT(23);
+  return contents;
+}
+SEXP less_basic_model_for_js_set_user(SEXP internal_p, SEXP user) {
+  less_basic_model_for_js_internal *internal = less_basic_model_for_js_get_internal(internal_p, 1);
+  internal->beta_1 = user_get_scalar_double(user, "beta_1", internal->beta_1, NA_REAL, NA_REAL);
+  internal->beta_2 = user_get_scalar_double(user, "beta_2", internal->beta_2, NA_REAL, NA_REAL);
+  internal->gamma = user_get_scalar_double(user, "gamma", internal->gamma, NA_REAL, NA_REAL);
+  internal->mu = user_get_scalar_double(user, "mu", internal->mu, NA_REAL, NA_REAL);
+  internal->sigma = user_get_scalar_double(user, "sigma", internal->sigma, NA_REAL, NA_REAL);
+  internal->D0 = (double*) user_get_array(user, false, internal->D0, "D0", NA_REAL, NA_REAL, 1, internal->dim_D0);
+  internal->E0 = (double*) user_get_array(user, false, internal->E0, "E0", NA_REAL, NA_REAL, 1, internal->dim_E0);
+  internal->I_hosp0 = (double*) user_get_array(user, false, internal->I_hosp0, "I_hosp0", NA_REAL, NA_REAL, 1, internal->dim_I_hosp0);
+  internal->I_ICU0 = (double*) user_get_array(user, false, internal->I_ICU0, "I_ICU0", NA_REAL, NA_REAL, 1, internal->dim_I_ICU0);
+  internal->I_mild0 = (double*) user_get_array(user, false, internal->I_mild0, "I_mild0", NA_REAL, NA_REAL, 1, internal->dim_I_mild0);
+  internal->p_hosp = (double*) user_get_array(user, false, internal->p_hosp, "p_hosp", NA_REAL, NA_REAL, 1, internal->dim_p_hosp);
+  internal->p_ICU = (double*) user_get_array(user, false, internal->p_ICU, "p_ICU", NA_REAL, NA_REAL, 1, internal->dim_p_ICU);
+  internal->p_mild = (double*) user_get_array(user, false, internal->p_mild, "p_mild", NA_REAL, NA_REAL, 1, internal->dim_p_mild);
+  internal->R0 = (double*) user_get_array(user, false, internal->R0, "R0", NA_REAL, NA_REAL, 1, internal->dim_R0);
+  internal->S0 = (double*) user_get_array(user, false, internal->S0, "S0", NA_REAL, NA_REAL, 1, internal->dim_S0);
+  for (int i = 1; i <= internal->dim_D; ++i) {
+    internal->initial_D[i - 1] = internal->D0[i - 1];
+  }
+  for (int i = 1; i <= internal->dim_E; ++i) {
+    internal->initial_E[i - 1] = internal->E0[i - 1];
+  }
+  for (int i = 1; i <= internal->dim_I_hosp; ++i) {
+    internal->initial_I_hosp[i - 1] = internal->I_hosp0[i - 1];
+  }
+  for (int i = 1; i <= internal->dim_I_ICU; ++i) {
+    internal->initial_I_ICU[i - 1] = internal->I_ICU0[i - 1];
+  }
+  for (int i = 1; i <= internal->dim_I_mild; ++i) {
+    internal->initial_I_mild[i - 1] = internal->I_mild0[i - 1];
+  }
+  for (int i = 1; i <= internal->dim_R; ++i) {
+    internal->initial_R[i - 1] = internal->R0[i - 1];
+  }
+  for (int i = 1; i <= internal->dim_S; ++i) {
+    internal->initial_S[i - 1] = internal->S0[i - 1];
+  }
+  internal->m = (double*) user_get_array(user, false, internal->m, "m", NA_REAL, NA_REAL, 2, internal->dim_m_1, internal->dim_m_2);
+  return R_NilValue;
+}
+SEXP less_basic_model_for_js_metadata(SEXP internal_p) {
+  less_basic_model_for_js_internal *internal = less_basic_model_for_js_get_internal(internal_p, 1);
+  SEXP ret = PROTECT(allocVector(VECSXP, 4));
+  SEXP nms = PROTECT(allocVector(STRSXP, 4));
+  SET_STRING_ELT(nms, 0, mkChar("variable_order"));
+  SET_STRING_ELT(nms, 1, mkChar("output_order"));
+  SET_STRING_ELT(nms, 2, mkChar("n_out"));
+  SET_STRING_ELT(nms, 3, mkChar("interpolate_t"));
+  setAttrib(ret, R_NamesSymbol, nms);
+  SEXP variable_length = PROTECT(allocVector(VECSXP, 7));
+  SEXP variable_names = PROTECT(allocVector(STRSXP, 7));
+  setAttrib(variable_length, R_NamesSymbol, variable_names);
+  SET_VECTOR_ELT(variable_length, 0, ScalarInteger(internal->dim_S));
+  SET_VECTOR_ELT(variable_length, 1, ScalarInteger(internal->dim_E));
+  SET_VECTOR_ELT(variable_length, 2, ScalarInteger(internal->dim_I_mild));
+  SET_VECTOR_ELT(variable_length, 3, ScalarInteger(internal->dim_I_hosp));
+  SET_VECTOR_ELT(variable_length, 4, ScalarInteger(internal->dim_I_ICU));
+  SET_VECTOR_ELT(variable_length, 5, ScalarInteger(internal->dim_R));
+  SET_VECTOR_ELT(variable_length, 6, ScalarInteger(internal->dim_D));
+  SET_STRING_ELT(variable_names, 0, mkChar("S"));
+  SET_STRING_ELT(variable_names, 1, mkChar("E"));
+  SET_STRING_ELT(variable_names, 2, mkChar("I_mild"));
+  SET_STRING_ELT(variable_names, 3, mkChar("I_hosp"));
+  SET_STRING_ELT(variable_names, 4, mkChar("I_ICU"));
+  SET_STRING_ELT(variable_names, 5, mkChar("R"));
+  SET_STRING_ELT(variable_names, 6, mkChar("D"));
+  SET_VECTOR_ELT(ret, 0, variable_length);
+  UNPROTECT(2);
+  SET_VECTOR_ELT(ret, 1, R_NilValue);
+  SET_VECTOR_ELT(ret, 2, ScalarInteger(0));
+  UNPROTECT(2);
+  return ret;
+}
+SEXP less_basic_model_for_js_initial_conditions(SEXP internal_p, SEXP t_ptr) {
+  less_basic_model_for_js_internal *internal = less_basic_model_for_js_get_internal(internal_p, 1);
+  SEXP r_state = PROTECT(allocVector(REALSXP, internal->dim_S + internal->dim_E + internal->dim_I_mild + internal->dim_I_hosp + internal->dim_I_ICU + internal->dim_R + internal->dim_D));
+  double * state = REAL(r_state);
+  memcpy(state + 0, internal->initial_S, internal->dim_S * sizeof(double));
+  memcpy(state + internal->dim_S, internal->initial_E, internal->dim_E * sizeof(double));
+  memcpy(state + internal->offset_variable_I_mild, internal->initial_I_mild, internal->dim_I_mild * sizeof(double));
+  memcpy(state + internal->offset_variable_I_hosp, internal->initial_I_hosp, internal->dim_I_hosp * sizeof(double));
+  memcpy(state + internal->offset_variable_I_ICU, internal->initial_I_ICU, internal->dim_I_ICU * sizeof(double));
+  memcpy(state + internal->offset_variable_R, internal->initial_R, internal->dim_R * sizeof(double));
+  memcpy(state + internal->offset_variable_D, internal->initial_D, internal->dim_D * sizeof(double));
+  UNPROTECT(1);
+  return r_state;
+}
+void less_basic_model_for_js_rhs(less_basic_model_for_js_internal* internal, double t, double * state, double * dstatedt, double * output) {
+  double * S = state + 0;
+  double * E = state + internal->dim_S;
+  double * I_mild = state + internal->offset_variable_I_mild;
+  double * I_hosp = state + internal->offset_variable_I_hosp;
+  double * I_ICU = state + internal->offset_variable_I_ICU;
+  double beta = (t < 50 ? internal->beta_1 : internal->beta_2);
+  for (int i = 1; i <= internal->dim_D; ++i) {
+    dstatedt[internal->offset_variable_D + i - 1] = internal->mu * I_mild[i - 1] + internal->mu * I_hosp[i - 1] + internal->mu * I_ICU[i - 1];
+  }
+  for (int i = 1; i <= internal->dim_R; ++i) {
+    dstatedt[internal->offset_variable_R + i - 1] = internal->sigma * I_mild[i - 1] + internal->sigma * I_hosp[i - 1] + internal->sigma * I_ICU[i - 1];
+  }
+  for (int i = 1; i <= internal->dim_I_hosp; ++i) {
+    dstatedt[internal->offset_variable_I_hosp + i - 1] = internal->p_hosp[i - 1] * (internal->gamma * E[i - 1]) - internal->sigma * I_hosp[i - 1] - internal->mu * I_hosp[i - 1];
+  }
+  for (int i = 1; i <= internal->dim_I_ICU; ++i) {
+    dstatedt[internal->offset_variable_I_ICU + i - 1] = internal->p_ICU[i - 1] * (internal->gamma * E[i - 1]) - internal->sigma * I_ICU[i - 1] - internal->mu * I_ICU[i - 1];
+  }
+  for (int i = 1; i <= internal->dim_I_mild; ++i) {
+    dstatedt[internal->offset_variable_I_mild + i - 1] = internal->p_mild[i - 1] * (internal->gamma * E[i - 1]) - internal->sigma * I_mild[i - 1] - internal->mu * I_mild[i - 1];
+  }
+  for (int i = 1; i <= internal->dim_temp; ++i) {
+    internal->temp[i - 1] = I_mild[i - 1] + I_hosp[i - 1] + I_ICU[i - 1];
+  }
+  for (int i = 1; i <= internal->dim_s_ij_1; ++i) {
+    for (int j = 1; j <= internal->dim_s_ij_2; ++j) {
+      internal->s_ij[i - 1 + internal->dim_s_ij_1 * (j - 1)] = internal->m[internal->dim_m_1 * (j - 1) + i - 1] * internal->temp[j - 1];
+    }
+  }
+  for (int i = 1; i <= internal->dim_lambda; ++i) {
+    internal->lambda[i - 1] = beta * odin_sum2(internal->s_ij, i - 1, i, 0, internal->dim_s_ij_2, internal->dim_s_ij_1);
+  }
+  for (int i = 1; i <= internal->dim_E; ++i) {
+    dstatedt[internal->dim_S + i - 1] = beta * S[i - 1] * internal->lambda[i - 1] - internal->gamma * E[i - 1];
+  }
+  for (int i = 1; i <= internal->dim_S; ++i) {
+    dstatedt[0 + i - 1] = -(beta) * S[i - 1] * internal->lambda[i - 1];
+  }
+}
+void less_basic_model_for_js_rhs_dde(size_t neq, double t, double * state, double * dstatedt, void * internal) {
+  less_basic_model_for_js_rhs((less_basic_model_for_js_internal*)internal, t, state, dstatedt, NULL);
+}
+void less_basic_model_for_js_rhs_desolve(int * neq, double * t, double * state, double * dstatedt, double * output, int * np) {
+  less_basic_model_for_js_rhs(less_basic_model_for_js_internal_ds, *t, state, dstatedt, output);
+}
+SEXP less_basic_model_for_js_rhs_r(SEXP internal_p, SEXP t, SEXP state) {
+  SEXP dstatedt = PROTECT(allocVector(REALSXP, LENGTH(state)));
+  less_basic_model_for_js_internal *internal = less_basic_model_for_js_get_internal(internal_p, 1);
+  double *output = NULL;
+  less_basic_model_for_js_rhs(internal, REAL(t)[0], REAL(state), REAL(dstatedt), output);
+  UNPROTECT(1);
+  return dstatedt;
 }
 SEIR_internal* SEIR_get_internal(SEXP internal_p, int closed_error) {
   SEIR_internal *internal = NULL;

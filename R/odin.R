@@ -42,6 +42,18 @@ explict_SEIR <- structure(function (beta_set, D_0, dt, E1_0, E2_0, gamma_E, gamm
 }, ir = "odin/explict_SEIR.json", class = "odin_generator")
 class(explict_SEIR) <- "odin_generator"
 attr(explict_SEIR, "ir") <- .explict_SEIR$public_fields$ir
+.less_basic_model_for_js <- odin:::odin_c_class("less_basic_model_for_js", list(get_internal = "less_basic_model_for_js_get_internal", finalise = "less_basic_model_for_js_finalise", create = "less_basic_model_for_js_create", initmod_desolve = "less_basic_model_for_js_initmod_desolve", contents = "less_basic_model_for_js_contents", set_user = "less_basic_model_for_js_set_user", metadata = "less_basic_model_for_js_metadata", initial_conditions = "less_basic_model_for_js_initial_conditions", rhs = "less_basic_model_for_js_rhs", rhs_dde = "less_basic_model_for_js_rhs_dde", rhs_desolve = "less_basic_model_for_js_rhs_desolve", rhs_r = "less_basic_model_for_js_rhs_r"), c("beta_1", "beta_2", "D0", "E0", "gamma", "I_hosp0", "I_ICU0", "I_mild0", "m", "mu", "p_hosp", "p_ICU", "p_mild", "R0", "S0", "sigma"), list(discrete = FALSE, has_array = TRUE, has_output = FALSE, has_user = TRUE, has_delay = FALSE, has_interpolate = FALSE, has_stochastic = FALSE, has_include = FALSE, initial_time_dependent = FALSE, safe = FALSE), "squire", "odin/less_basic_model_for_js.json", TRUE)
+less_basic_model_for_js <- structure(function (beta_1, beta_2, D0, E0, gamma, I_hosp0, I_ICU0,
+    I_mild0, m, mu, p_hosp, p_ICU, p_mild, R0, S0, sigma, user = list(beta_1 = beta_1,
+        beta_2 = beta_2, D0 = D0, E0 = E0, gamma = gamma, I_hosp0 = I_hosp0,
+        I_ICU0 = I_ICU0, I_mild0 = I_mild0, m = m, mu = mu, p_hosp = p_hosp,
+        p_ICU = p_ICU, p_mild = p_mild, R0 = R0, S0 = S0, sigma = sigma),
+    unused_user_action = NULL, use_dde = FALSE)
+{
+    .less_basic_model_for_js$new(user, unused_user_action, use_dde)
+}, ir = "odin/less_basic_model_for_js.json", class = "odin_generator")
+class(less_basic_model_for_js) <- "odin_generator"
+attr(less_basic_model_for_js, "ir") <- .less_basic_model_for_js$public_fields$ir
 .SEIR <- odin:::odin_c_class("SEIR", list(get_internal = "SEIR_get_internal", finalise = "SEIR_finalise", create = "SEIR_create", initmod_desolve = "SEIR_initmod_desolve", contents = "SEIR_contents", set_user = "SEIR_set_user", metadata = "SEIR_metadata", initial_conditions = "SEIR_initial_conditions", rhs = "SEIR_rhs", rhs_dde = "SEIR_rhs_dde", rhs_r = "SEIR_rhs_r"), c("beta_set", "dt", "E0", "E02", "gamma_E", "gamma_I", "I0", "mix_mat_set", "N_age", "R0", "S0", "tt_beta", "tt_matrix"), list(discrete = TRUE, has_array = TRUE, has_output = TRUE, has_user = TRUE, has_delay = FALSE, has_interpolate = TRUE, has_stochastic = TRUE, has_include = FALSE, initial_time_dependent = FALSE, safe = FALSE), "squire", "odin/SEIR.json", TRUE)
 SEIR <- structure(function (beta_set, dt, E0, E02, gamma_E, gamma_I,
     I0, mix_mat_set, N_age, R0, S0, tt_beta, tt_matrix, user = list(beta_set = beta_set,
