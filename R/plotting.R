@@ -123,39 +123,46 @@ plot_calibration_cases_barplot <- function(df, data, forecast = 0) {
                                     y = .data$value, col = .data$variable)) +
     ggplot2::geom_ribbon(data = pd_group,
                          mapping = ggplot2::aes(ymin = .data$ymin,
-                                                ymax = .data$ymax),
+                                                ymax = .data$ymax,
+                                                fill = "Predicted"),
                          color = "white",
-                         fill = "#8cbbca",
                          alpha = 0.2,
                          size = 0,
-                         show.legend = FALSE) +
+                         show.legend = TRUE) +
     ggplot2::geom_ribbon(data = pd_group,
                          mapping = ggplot2::aes(ymin = .data$yinner_min,
-                                                ymax = .data$yinner_max),
+                                                ymax = .data$yinner_max,
+                                                fill = "Predicted"),
                          color = "white",
-                         fill = "#3f8ea7",
                          alpha = 0.8,
                          size = 0,
-                         show.legend = FALSE) +
+                         show.legend = TRUE) +
     ggplot2::geom_bar(data = data,
-                      mapping = ggplot2::aes(x = .data$date, y = .data$cases),
+                      mapping = ggplot2::aes(x = .data$date, y = .data$cases,
+                                             fill = "Observed"),
                       stat = "identity",
-                      fill = "#c59e96",
+                      show.legend = TRUE,
                       inherit.aes = FALSE) +
     ggplot2::geom_vline(xintercept = Sys.Date(), linetype = "dashed") +
     ggplot2::ylab("Daily Number of Infections") +
     ggplot2::theme_bw()  +
     ggplot2::scale_y_continuous(expand = c(0,0)) +
-    ggplot2::scale_x_date(date_breaks = "1 week", date_labels = "%b %d") +
+    ggplot2::scale_fill_manual(name = "", labels = rev(c("Predicted", "Observed")),
+                               values = rev(c("#3f8ea7","#c59e96"))) +
+    ggplot2::scale_x_date(date_breaks = "2 week", date_labels = "%b %d") +
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, colour = "black"),
           axis.title.x = ggplot2::element_blank(),
           panel.grid.major.x = ggplot2::element_blank(),
           panel.grid.minor.x = ggplot2::element_blank(),
           panel.border = ggplot2::element_blank(),
           panel.background = ggplot2::element_blank(),
-          axis.line = ggplot2::element_line(colour = "black")
+          axis.line = ggplot2::element_line(colour = "black"),
+          legend.position = "top"
     )
+gg_cases
 
+
+  fill = "#fill = "#3f8ea7",",
   invisible(gg_cases)
 
 }
@@ -204,7 +211,7 @@ plot_calibration_healthcare <- function(df, data, forecast = 14) {
     ggplot2::scale_fill_discrete(name = "Predicted", labels = c("Deaths", "Hospital Beds", "ICU Beds")) +
     ggplot2::scale_shape_discrete(name = "Observed") +
     ggplot2::theme_bw() +
-    ggplot2::scale_x_date(date_breaks = "1 week", date_labels = "%b %d", limits = c(Sys.Date()-7, Sys.Date() + forecast)) +
+    ggplot2::scale_x_date(date_breaks = "2 week", date_labels = "%b %d", limits = c(Sys.Date()-7, Sys.Date() + forecast)) +
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, colour = "black"),
                    axis.title.x = ggplot2::element_blank(),
                    panel.grid.major.x = ggplot2::element_blank(),
@@ -243,30 +250,34 @@ plot_calibration_healthcare_barplot <- function(df, data, forecast = 14) {
                                                 group = .data$variable)) +
     ggplot2::geom_ribbon(data = pd_group,
                          mapping = ggplot2::aes(ymin = .data$ymin,
-                                                ymax = .data$ymax),
+                                                ymax = .data$ymax,
+                                                fill = "Predicted"),
                          color = "white",
-                         fill = "#8cbbca",
                          alpha = 0.2,
                          size = 0,
-                         show.legend = FALSE) +
+                         show.legend = TRUE) +
     ggplot2::geom_ribbon(data = pd_group,
                          mapping = ggplot2::aes(ymin = .data$yinner_min,
-                                                ymax = .data$yinner_max),
+                                                ymax = .data$yinner_max,
+                                                fill = "Predicted"),
                          color = "white",
-                         fill = "#3f8ea7",
                          alpha = 0.8,
                          size = 0,
-                         show.legend = FALSE) +
+                         show.legend = TRUE) +
     ggplot2::geom_bar(data = data,
-                      mapping = ggplot2::aes(x = .data$date, y = .data$deaths),
+                      mapping = ggplot2::aes(x = .data$date, y = .data$deaths,
+                                             fill = "Observed"),
                       stat = "identity",
-                      fill = "#c59e96",
+                      show.legend = TRUE,
                       inherit.aes = FALSE) +
     ggplot2::geom_vline(xintercept = Sys.Date(), linetype = "dashed") +
     ggplot2::theme_bw()  +
     ggplot2::ylab("Daily Deaths") +
     ggplot2::scale_y_continuous(expand = c(0,0)) +
-    ggplot2::scale_x_date(date_breaks = "1 week", date_labels = "%b %d", limits = c(Sys.Date()-7, Sys.Date() + forecast)) +
+    ggplot2::scale_x_date(date_breaks = "1 week", date_labels = "%b %d",
+                          limits = c(data$date[min(which(data$deaths>0))]-1, Sys.Date() + forecast)) +
+    ggplot2::scale_fill_manual(name = "", labels = rev(c("Predicted", "Observed")),
+                               values = rev(c("#3f8ea7","#c59e96"))) +
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, colour = "black"),
                    axis.title.x = ggplot2::element_blank(),
                    panel.grid.major.x = ggplot2::element_blank(),
