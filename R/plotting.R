@@ -55,9 +55,11 @@ plot_calibration_cases <- function(df, data, forecast = 0) {
   # format cases
   data$cases <- rev(c(tail(data$cases,1), diff(rev(data$cases))))
 
+  origin <- as.Date("2015-01-01") - as.numeric(as.Date("2015-01-01"))
+
   # Plot
   gg_cases <- ggplot2::ggplot(
-    sub, ggplot2::aes(x = as.Date(.data$date, origin = "1970-01-01 UTC"),
+    sub, ggplot2::aes(x = as.Date(.data$date, origin = origin),
                       y = .data$value, col = .data$variable,
                       group = interaction(.data$variable, .data$replicate))) +
     ggplot2::geom_vline(xintercept = Sys.Date(), linetype = "dashed") +
@@ -118,8 +120,10 @@ plot_calibration_cases_barplot <- function(df, data, forecast = 0) {
   # format cases
   data$cases <- rev(c(tail(data$cases,1), diff(rev(data$cases))))
 
+  origin <- as.Date("2015-01-01") - as.numeric(as.Date("2015-01-01"))
+
   # Plot
-  gg_cases <- ggplot2::ggplot(sub, ggplot2::aes(x = as.Date(.data$date, origin = "1970-01-01 UTC"),
+  gg_cases <- ggplot2::ggplot(sub, ggplot2::aes(x = as.Date(.data$date, origin = origin),
                                     y = .data$value, col = .data$variable)) +
     ggplot2::geom_ribbon(data = pd_group,
                          mapping = ggplot2::aes(ymin = .data$ymin,
@@ -183,8 +187,10 @@ plot_calibration_healthcare <- function(df, data, forecast = 14) {
   # format cases
   data$deaths <- rev(c(tail(data$deaths,1), diff(rev(data$deaths))))
 
+  origin <- as.Date("2015-01-01") - as.numeric(as.Date("2015-01-01"))
+
   # Plot
-  gg_healthcare <- ggplot2::ggplot(sub, ggplot2::aes(x = as.Date(.data$date, origin = "1970-01-01 UTC"),
+  gg_healthcare <- ggplot2::ggplot(sub, ggplot2::aes(x = as.Date(.data$date, origin = origin),
                       y = .data$value, col = .data$variable,
                       group = interaction(.data$variable, .data$replicate))) +
     ggplot2::geom_vline(xintercept = Sys.Date(), linetype = "dashed") +
@@ -243,9 +249,11 @@ plot_calibration_healthcare_barplot <- function(df, data, forecast = 14) {
   # format cases
   data$deaths <- rev(c(tail(data$deaths,1), diff(rev(data$deaths))))
 
+  origin <- as.Date("2015-01-01") - as.numeric(as.Date("2015-01-01"))
+
   # Plot
   gg_healthcare <- ggplot2::ggplot(sub,
-                                   ggplot2::aes(x = as.Date(.data$date, origin = "1970-01-01 UTC"),
+                                   ggplot2::aes(x = as.Date(.data$date, origin = origin),
                                                 y = .data$value, fill = .data$variable,
                                                 group = .data$variable)) +
     ggplot2::geom_ribbon(data = pd_group,

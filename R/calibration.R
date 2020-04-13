@@ -122,7 +122,7 @@ calibrate <- function(data, country, reporting_fraction = 1,
                             cases = data$cases)
 
   # adjust for reporting fraction
-  data$true_deaths <- data$deaths / reporting_fraction
+  data$true_deaths <- round(data$deaths / reporting_fraction)
 
   # get population and mixing matrix for specific country
   pop <- get_population(country)
@@ -148,6 +148,10 @@ calibrate <- function(data, country, reporting_fraction = 1,
                                 output_transform = FALSE,
                                 ...)
 
+  # variable location of R for checking for epidemic
+  # get the index for looking up D and R
+  index <- odin_index(r$model)
+
   # create array for multiple model runs (with different seeds) to be stored
   r$output <- array(r$output, dim = c(nrow(r$output[,,1]), ncol(r$output[,,1]), replicates))
 
@@ -157,20 +161,24 @@ calibrate <- function(data, country, reporting_fraction = 1,
   # running and storing the model output for each of the different initial seeding cases
   for(i in 2:replicates) {
     r$mod$set_user(E1_0 = E1_0[[i]])
+    out <-  r$mod$run(t, replicate = 1)
+    while (sum(out[nrow(out[,,1]), index$R, 1]) < (sum(pop$n)/10)) {
+      out <-  r$mod$run(t, replicate = 1)
+    }
     r$output[, , i] <- r$mod$run(t, replicate = 1)
   }
   r$parameters$replicates <- replicates
 
-  # get the index for looking up D
-  index <- odin_index(r$model)
+  max_deaths <- max(data$true_deaths, na.rm = TRUE)
+  earliest_date <- data$date[max(which(data$true_deaths == max_deaths))]
 
   # create the shifted date
   timings <- vapply(seq_len(replicates), function(x) {
-    which.max(rowSums(r$output[,index$D,x]) >= data$true_deaths[1])
+    which.max(rowSums(r$output[,index$D,x]) >= max_deaths)
   }, FUN.VALUE = numeric(1))
 
   r$date <- vapply(seq_len(replicates), function(x) {
-    data$date[1] + (r$output[,index$time,x] - (timings[x]*r$parameters$dt))
+    earliest_date + (r$output[,index$time,x] - (timings[x]*r$parameters$dt))
   }, FUN.VALUE = double(r$parameters$time_period/r$parameters$dt))
 
   # add the real data used
